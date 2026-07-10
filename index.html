@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>허가 후 변경관리: 사용기한 연장 · 소아 연령확대 (FDA 중심)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+  :root{
+    --ink:#0d1b2a;--ink-2:#1b2f45;--paper:#eef2f3;--paper-2:#e2e8ea;--line:#c3d0d3;
+    --teal:#0f7d78;--teal-2:#12a19a;--amber:#c8752a;--red:#b23a48;--green:#2f7d5b;--slate:#5b6b73;--white:#fff;
+    --shadow:0 8px 30px rgba(13,27,42,.12);--shadow-sm:0 2px 12px rgba(13,27,42,.09);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:'IBM Plex Sans KR',sans-serif;background:var(--ink);color:var(--ink);overflow:hidden;-webkit-font-smoothing:antialiased}
+  .deck{position:relative;width:100vw;height:100vh;overflow:hidden;background:var(--paper)}
+
+  /* tab bar */
+  .tabbar{position:fixed;top:0;left:0;right:0;height:64px;z-index:60;background:var(--ink);display:flex;align-items:stretch;padding:0 clamp(60px,6vw,90px) 0 clamp(20px,2.4vw,34px);box-shadow:0 2px 14px rgba(13,27,42,.2)}
+  .tabbar .logo{display:flex;align-items:center;gap:10px;flex-shrink:0;padding-right:22px;margin-right:8px;border-right:1px solid rgba(255,255,255,.14)}
+  .tabbar .logo .mark{width:22px;height:22px;border-radius:6px;background:var(--teal-2);display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:13px}
+  .tabbar .logo .t{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:rgba(255,255,255,.85);line-height:1.25}
+  .tabbar .logo .t b{color:#fff}
+  .tabs{display:flex;align-items:stretch;overflow-x:auto;flex:1;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{display:flex;align-items:center;gap:10px;padding:0 clamp(14px,1.6vw,24px);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:background .2s}
+  .tab:hover{background:rgba(255,255,255,.05)}
+  .tab .n{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:rgba(255,255,255,.4)}
+  .tab .ttl{font-size:13.5px;font-weight:500;color:rgba(255,255,255,.55)}
+  .tab.on{border-bottom-color:var(--teal-2);background:rgba(18,161,154,.1)}
+  .tab.on .n{color:var(--teal-2)}
+  .tab.on .ttl{color:#fff;font-weight:600}
+
+  .stage{position:absolute;top:64px;left:0;right:0;bottom:0}
+  .page{position:absolute;inset:0;padding:clamp(20px,2.6vw,40px) clamp(60px,6vw,96px);opacity:0;pointer-events:none;transform:translateX(24px);transition:opacity .45s ease,transform .45s ease;display:flex;flex-direction:column;overflow-y:auto}
+  .page.active{opacity:1;pointer-events:auto;transform:none}
+
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--teal);font-weight:600}
+  .display{font-family:'Space Grotesk',sans-serif;font-weight:600;line-height:1.03;letter-spacing:-.02em;color:var(--ink)}
+  h2.display{font-size:clamp(28px,3.2vw,44px)}
+  .mono{font-family:'IBM Plex Mono',monospace}.en{font-family:'Space Grotesk',sans-serif;letter-spacing:-.01em}
+  .page-head{flex-shrink:0;margin-bottom:20px}
+  .page-head .eyebrow{margin-bottom:10px}
+  .page-head .sub{font-size:16px;color:var(--slate);margin-top:12px;max-width:980px;line-height:1.55}
+  .page-head .sub b{color:var(--ink-2)}
+  .note{font-size:13px;color:var(--slate);line-height:1.55;margin-top:auto;padding-top:16px;flex-shrink:0}
+  .note b{color:var(--ink-2)}
+
+  /* P1 tree */
+  .tree-layout{display:grid;grid-template-columns:1.1fr 1fr;gap:26px;flex:1;min-height:0}
+  @media(max-width:1050px){.tree-layout{grid-template-columns:1fr}}
+  .tree{display:flex;flex-direction:column;gap:13px;align-content:start}
+  .tree .root{background:var(--ink);color:var(--paper);border-radius:13px;padding:17px 22px;font-size:16px;font-weight:500}
+  .tree .root .en{color:var(--teal-2);font-weight:600}
+  .q-node{background:var(--white);border:1.5px solid var(--line);border-radius:13px;padding:16px 20px}
+  .q-node .q{font-size:15.5px;font-weight:600;color:var(--ink);display:flex;gap:9px;align-items:baseline;line-height:1.45}
+  .q-node .q .dot{width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0;transform:translateY(-1px)}
+  .branches{display:flex;flex-wrap:wrap;gap:9px;margin-top:13px}
+  .chip{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;padding:9px 14px;border-radius:9px;cursor:pointer;border:1.5px solid transparent;transition:all .2s;user-select:none}
+  .chip[data-g="pas"]{background:rgba(178,58,72,.1);color:var(--red);border-color:rgba(178,58,72,.28)}
+  .chip[data-g="cbe30"]{background:rgba(200,117,42,.12);color:var(--amber);border-color:rgba(200,117,42,.3)}
+  .chip[data-g="cbe0"]{background:rgba(15,125,120,.12);color:var(--teal);border-color:rgba(15,125,120,.3)}
+  .chip[data-g="ar"]{background:rgba(47,125,91,.12);color:var(--green);border-color:rgba(47,125,91,.3)}
+  .chip:hover{transform:translateY(-2px)}.chip.sel{box-shadow:0 0 0 3px rgba(15,125,120,.15);transform:translateY(-2px)}
+  .detail-panel{background:var(--white);border:1.5px solid var(--line);border-radius:18px;padding:26px 30px;display:flex;flex-direction:column;box-shadow:var(--shadow-sm);overflow-y:auto}
+  .detail-panel .tag{display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;padding:8px 15px;border-radius:9px;align-self:flex-start}
+  .detail-panel h3{font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:600;margin:16px 0 4px;color:var(--ink)}
+  .detail-panel .krname{font-size:15px;color:var(--slate);margin-bottom:18px}
+  .dp-row{display:flex;gap:16px;padding:14px 0;border-top:1px solid var(--paper-2)}
+  .dp-row .lab{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--slate);width:130px;flex-shrink:0;padding-top:2px;font-weight:600}
+  .dp-row .val{font-size:15.5px;color:var(--ink-2);line-height:1.6}.dp-row .val b{color:var(--ink)}
+  .timing-bar{margin-top:20px}
+  .timing-bar .tb-lab{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;color:var(--slate);margin-bottom:7px;font-weight:600}
+  .timing-bar .tb-track{height:40px;background:var(--paper);border-radius:9px;position:relative;overflow:hidden;border:1px solid var(--line)}
+  .timing-bar .tb-fill{position:absolute;left:0;top:0;bottom:0;border-radius:9px 0 0 9px;transition:width .5s ease}
+  .timing-bar .tb-cap{font-size:14px;color:var(--ink-2);margin-top:9px;font-weight:500}
+
+  /* P2 age */
+  .age-layout{display:grid;grid-template-columns:1fr 1.05fr;gap:26px;flex:1;min-height:0}
+  @media(max-width:1050px){.age-layout{grid-template-columns:1fr}}
+  .age-track{display:flex;flex-direction:column;gap:0;position:relative;padding-left:8px}
+  .age-step{position:relative;padding:15px 16px 15px 34px;cursor:pointer;border-radius:12px;transition:background .2s;border:1.5px solid transparent}
+  .age-step::before{content:"";position:absolute;left:8px;top:23px;width:13px;height:13px;border-radius:50%;background:var(--white);border:3px solid var(--teal);z-index:2}
+  .age-step::after{content:"";position:absolute;left:14px;top:33px;bottom:-8px;width:2px;background:var(--line);z-index:1}
+  .age-step:last-child::after{display:none}
+  .age-step:hover{background:var(--white)}
+  .age-step.sel{background:var(--white);border-color:var(--teal);box-shadow:var(--shadow-sm)}
+  .age-step.sel::before{background:var(--teal);box-shadow:0 0 0 5px rgba(15,125,120,.15)}
+  .age-step .agrp{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:600;color:var(--ink);display:flex;align-items:baseline;gap:10px}
+  .age-step .agrp .yr{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;color:var(--amber);letter-spacing:.02em}
+  .age-step .aen{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--slate);letter-spacing:.04em;margin-top:3px}
+  .age-step .abar{margin-top:10px;height:6px;background:var(--paper-2);border-radius:3px;overflow:hidden}
+  .age-step .abar i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--teal-2));border-radius:3px}
+  .age-step .abar-lab{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--slate);margin-top:5px;letter-spacing:.04em}
+  .age-detail{background:var(--white);border:1.5px solid var(--line);border-radius:18px;padding:26px 30px;box-shadow:var(--shadow-sm);overflow-y:auto}
+  .age-detail h3{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:600;color:var(--ink);display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .age-detail h3 .yr{font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--amber);font-weight:600}
+  .age-detail h3 .een{font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--slate);font-weight:400}
+  .age-detail .adsub{font-size:14px;color:var(--slate);margin:6px 0 18px}
+  .adgrid .adr{display:flex;gap:16px;padding:13px 0;border-top:1px solid var(--paper-2)}
+  .adgrid .adr .k{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);width:112px;flex-shrink:0;padding-top:2px;font-weight:600}
+  .adgrid .adr .v{font-size:15px;color:var(--ink-2);line-height:1.6}.adgrid .adr .v b{color:var(--ink)}
+  .extrap-meter{margin-top:20px;padding:18px 20px;background:var(--paper);border-radius:14px}
+  .extrap-meter .emh{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--slate);margin-bottom:12px}
+  .extrap-meter .emrow{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  .extrap-meter .emrow:last-child{margin-bottom:0}
+  .extrap-meter .emrow .lbl{font-size:13.5px;width:88px;color:var(--ink-2);font-weight:500}
+  .extrap-meter .emrow .track{flex:1;height:10px;background:var(--paper-2);border-radius:5px;overflow:hidden}
+  .extrap-meter .emrow .track i{display:block;height:100%;border-radius:5px;transition:width .5s ease}
+
+  /* P3 merged data+collab+CTD */
+  .row-label{display:flex;align-items:center;gap:12px;margin:2px 0 12px;flex-shrink:0}
+  .row-label .rl-tag{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.06em;padding:5px 12px;border-radius:8px}
+  .row-label.expiry .rl-tag{background:rgba(15,125,120,.12);color:var(--teal)}
+  .row-label.peds .rl-tag{background:rgba(200,117,42,.12);color:var(--amber)}
+  .row-label .rl-t{font-size:15px;font-weight:600;color:var(--ink)}
+  .row-label .rl-ctd{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--slate)}
+  .dc-row{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 12px;flex-shrink:0}
+  .dc-row::-webkit-scrollbar{height:7px}
+  .dept-card{position:relative;background:var(--white);border:1.5px solid var(--line);border-radius:14px;padding:16px 18px;transition:transform .22s,box-shadow .22s,border-color .22s;overflow:hidden;flex:1;min-width:205px}
+  .dept-card:hover{transform:translateY(-5px);box-shadow:var(--shadow);border-color:var(--teal);z-index:5}
+  .dept-card.amber:hover{border-color:var(--amber)}
+  .dept-card .dname{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:600;color:var(--ink);margin-bottom:9px;line-height:1.15}
+  .dept-card .ctd-pin{display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:#fff;background:var(--teal);padding:6px 11px;border-radius:8px;margin-bottom:11px;letter-spacing:.01em;box-shadow:0 2px 8px rgba(15,125,120,.25)}
+  .dept-card .ctd-pin::before{content:"\00A7";font-size:15px;opacity:.85}
+  .dept-card.amber .ctd-pin{background:var(--amber);box-shadow:0 2px 8px rgba(200,117,42,.25)}
+  .dept-card .drole{font-size:13.5px;color:var(--slate);line-height:1.5;min-height:40px}
+  .dept-card .deliv{max-height:0;opacity:0;overflow:hidden;transition:max-height .3s,opacity .3s,margin .3s;margin-top:0}
+  .dept-card:hover .deliv{max-height:300px;opacity:1;margin-top:10px}
+  .deliv .dh{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--slate);border-top:1px solid var(--paper-2);padding-top:10px;margin-bottom:7px}
+  .deliv ul{list-style:none}
+  .deliv li{font-size:13.5px;color:var(--ink-2);line-height:1.5;padding:4px 0 4px 15px;position:relative}
+  .deliv li::before{content:"▸";position:absolute;left:0;color:var(--teal);font-size:11px;top:5px}
+  .dept-card.amber .deliv li::before{color:var(--amber)}
+  .deliv .ctd-map{margin-top:10px;padding:9px 11px;background:rgba(15,125,120,.08);border-radius:8px;font-size:12.5px;color:var(--ink-2);line-height:1.45}
+  .deliv .ctd-map b{color:var(--teal);font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:700}
+  .dept-card.amber .deliv .ctd-map{background:rgba(200,117,42,.08)}
+  .dept-card.amber .deliv .ctd-map b{color:var(--amber)}
+
+  /* P4 timeline — 2-axis toggle */
+  .tl-agency{display:flex;gap:10px;flex-shrink:0;margin-bottom:14px}
+  .ag-btn{font-family:'IBM Plex Sans KR',sans-serif;border:2px solid var(--line);background:var(--white);cursor:pointer;padding:11px 26px;border-radius:11px;font-size:16px;font-weight:600;color:var(--slate);transition:all .2s;display:flex;align-items:center;gap:9px}
+  .ag-btn .flag{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;padding:2px 9px;border-radius:6px;background:var(--paper-2);color:var(--slate)}
+  .ag-btn:hover{transform:translateY(-2px)}
+  .ag-btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .ag-btn.on .flag{background:var(--teal-2);color:#fff}
+  .tl-toggle{display:flex;flex-wrap:wrap;gap:8px;flex-shrink:0;margin-bottom:20px}
+  .tl-btn{font-family:'IBM Plex Sans KR',sans-serif;border:1.5px solid var(--line);background:var(--white);cursor:pointer;padding:10px 16px;border-radius:10px;font-size:13.5px;font-weight:600;color:var(--slate);transition:all .2s;display:flex;flex-direction:column;gap:2px;align-items:flex-start}
+  .tl-btn .cat{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;font-weight:600}
+  .tl-btn.expiry .cat{color:var(--teal)}
+  .tl-btn.peds .cat{color:var(--amber)}
+  .tl-btn:hover{transform:translateY(-2px)}
+  .tl-btn.on{color:#fff;border-color:transparent}
+  .tl-btn.on.expiry{background:var(--teal)}.tl-btn.on.expiry .cat{color:rgba(255,255,255,.75)}
+  .tl-btn.on.peds{background:var(--amber)}.tl-btn.on.peds .cat{color:rgba(255,255,255,.8)}
+
+  .tl-stage{background:var(--white);border:1.5px solid var(--line);border-radius:18px;padding:32px 40px 28px;flex:1;min-height:0;display:flex;flex-direction:column;box-shadow:var(--shadow-sm);overflow:hidden}
+  .tl-header{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px}
+  .tl-header .th-name{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;color:var(--ink)}
+  .tl-header .th-name .badge{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;padding:4px 11px;border-radius:7px;margin-left:10px;vertical-align:middle}
+  .tl-header .th-total{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--slate)}
+  .tl-desc{font-size:14px;color:var(--slate);line-height:1.5;margin-bottom:34px;max-width:900px}
+  .tl-desc b{color:var(--ink-2)}
+
+  .axis-wrap{position:relative;flex:1;min-height:210px;display:flex;flex-direction:column;justify-content:center;padding:20px 0}
+  .axis{position:relative;height:3px;background:var(--ink);border-radius:2px;margin:0 10px}
+  .axis .arrow-head{position:absolute;right:-2px;top:50%;transform:translateY(-50%);width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:10px solid var(--ink)}
+  .axis .progress{position:absolute;left:0;top:0;height:100%;background:var(--teal);border-radius:2px;transition:width .7s ease}
+  .peds-mode .axis .progress{background:var(--amber)}
+  .node{position:absolute;top:50%;transform:translate(-50%,-50%);z-index:3;opacity:0;transition:opacity .4s ease}
+  .node.show{opacity:1}
+  .node .dot{width:15px;height:15px;border-radius:50%;background:var(--ink);border:3px solid var(--white);box-shadow:0 0 0 2px var(--ink);margin:0 auto}
+  .peds-mode .node .dot{box-shadow:0 0 0 2px var(--amber);background:var(--amber)}
+  .node .pill{position:absolute;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap}
+  .peds-mode .node .pill{background:var(--amber)}
+  .node .lbl{position:absolute;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:12.5px;color:var(--ink-2);font-weight:500;text-align:center}
+  /* edge nodes: anchor label to the node so it doesn't run off the card */
+  .node.edge-l .pill,.node.edge-l .lbl{left:0;transform:none;text-align:left}
+  .node.edge-r .pill,.node.edge-r .lbl{left:auto;right:0;transform:none;text-align:right}
+  .node.up .pill{bottom:28px}.node.up .lbl{bottom:56px}
+  .node.down .pill{top:28px}.node.down .lbl{top:56px}
+  .axis-scale{display:flex;justify-content:space-between;margin:112px 10px 0;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--slate);font-weight:500;position:relative}
+  .axis-scale span{position:relative}
+  .axis-scale span::before{content:"";position:absolute;top:-14px;left:50%;width:1px;height:8px;background:var(--line)}
+  .axis-unit{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--slate);text-align:right;margin:6px 10px 0;letter-spacing:.04em}
+  .tl-foot{font-size:12.5px;color:var(--slate);line-height:1.5;margin-top:20px;padding-top:14px;border-top:1px solid var(--paper-2)}
+  .tl-foot b{color:var(--ink-2)}
+
+  /* side arrows */
+  .side-arrow{position:fixed;top:calc(50% + 32px);transform:translateY(-50%);z-index:55;width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;background:var(--ink);color:var(--paper);font-size:26px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);transition:background .2s,transform .2s,opacity .2s}
+  .side-arrow:hover:not(:disabled){background:var(--teal);transform:translateY(-50%) scale(1.08)}
+  .side-arrow:disabled{opacity:.25;cursor:default}
+  .side-arrow.prev{left:16px}.side-arrow.next{right:16px}
+
+  ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}::-webkit-scrollbar-track{background:transparent}
+  @media (prefers-reduced-motion:reduce){.page,.chip,.dept-card,.age-step,.tb-fill,.side-arrow,.node,.progress{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="deck">
+  <div class="tabbar">
+    <div class="logo"><div class="mark">RA</div><div class="t"><b>POST-APPROVAL</b><br>변경관리</div></div>
+    <div class="tabs" id="tabs"></div>
+  </div>
+  <div class="stage">
+
+    <!-- P1 tree -->
+    <section class="page active" data-page="0">
+      <div class="page-head">
+        <div class="eyebrow">TYPE 01 · 사용기한 연장 · FDA 21 CFR 314.70</div>
+        <h2 class="display">보고등급을 결정하는 두 개의 질문</h2>
+        <p class="sub">FDA에서 사용기한 연장은 <b>변경의 risk 수준</b>과 <b>이미 승인된 stability protocol이 있는지</b>에 따라 PAS · CBE-30 · CBE-0 · Annual Report로 갈린다. 아래 등급을 눌러 요건과 라벨 반영 시점을 확인하자.</p>
+      </div>
+      <div class="tree-layout">
+        <div class="tree">
+          <div class="root">기허가 품목의 <span class="en">shelf-life extension</span> 신청</div>
+          <div class="q-node">
+            <div class="q"><span class="dot"></span>Q1. 이미 <b>승인된 stability protocol</b>에 따라 얻은 full shelf-life 데이터인가? <span style="font-weight:400;color:var(--slate);font-size:13px">(NO면 risk 크기에 따라 CBE-30 또는 PAS)</span></div>
+            <div class="branches">
+              <div class="chip" data-g="ar" onclick="selGrade('ar')">YES → Annual Report</div>
+              <div class="chip" data-g="cbe30" onclick="selGrade('cbe30')">NO → CBE-30</div>
+              <div class="chip" data-g="pas" onclick="selGrade('pas')">NO → PAS</div>
+            </div>
+          </div>
+          <div class="q-node">
+            <div class="q"><span class="dot"></span>Q2. 변경이 품질에 미치는 영향(risk)의 크기는?</div>
+            <div class="branches">
+              <div class="chip" data-g="pas" onclick="selGrade('pas')">Major → PAS</div>
+              <div class="chip" data-g="cbe30" onclick="selGrade('cbe30')">Moderate → CBE-30</div>
+              <div class="chip" data-g="cbe0" onclick="selGrade('cbe0')">Moderate(경) → CBE-0</div>
+              <div class="chip" data-g="ar" onclick="selGrade('ar')">Minor → Annual Report</div>
+            </div>
+          </div>
+          <div class="q-node" style="background:var(--paper);border-style:dashed">
+            <div class="q" style="color:var(--slate);font-size:14.5px"><span class="dot" style="background:var(--teal)"></span>Tip. <b style="color:var(--ink-2)">Comparability Protocol(PACMP)</b>이 승인돼 있으면 한 등급씩 낮출 수 있다 (PAS→CBE, CBE→AR).</div>
+          </div>
+        </div>
+        <div class="detail-panel" id="gradePanel"></div>
+      </div>
+      <div class="note"><b>근거:</b> 21 CFR 314.70 · ICH Q1A(R2)/Q1E · FDA CP guidance. ICH Q1E 외삽 한도(장기보존자료의 1.5배 &amp; +6개월 초과 불가)로 <b>24→36개월 연장은 통상 30개월 real-time 데이터</b>가 필요. OTC monograph 제품은 314.70 직접 대상이 아니며, SLEP·shortage extension은 별도 트랙.</div>
+    </section>
+
+    <!-- P2 age -->
+    <section class="page" data-page="1">
+      <div class="page-head">
+        <div class="eyebrow">TYPE 02 · 소아 연령확대 · iPSP → sNDA/sBLA · ICH E11</div>
+        <h2 class="display">위에서 아래로: Age de-escalation</h2>
+        <p class="sub">경로는 <b>기존 IND에서 소아 임상 → 라벨 확대를 위한 sNDA/sBLA</b>. 한 번에 다 열지 않고 <b>청소년부터 어린 연령으로 단계적</b>으로 내려간다. 나이가 어릴수록 성인 자료 외삽(extrapolation)은 약해지고 자체 PK·안전성 부담이 커진다. 연령군을 눌러보자.</p>
+      </div>
+      <div class="age-layout">
+        <div class="age-track" id="ageTrack"></div>
+        <div class="age-detail" id="agePanel"></div>
+      </div>
+      <div class="note"><b>※ 외삽 가능성 %는 정성적 개념도이며 규제상 확정 수치가 아니다.</b> ICH E11(R1)·FDA extrapolation framework는 외삽을 full / partial / none 같은 범주로 다루며 백분율로 정량화하지 않는다. 위 수치는 "청소년일수록 외삽 강, 신생아일수록 약"이라는 경향을 시각화한 것. <b>ICH E11 연령 구분:</b> 신생아(0–27일)·영아(28일–23개월)·소아(2–11세)·청소년(12–17세).</div>
+    </section>
+
+    <!-- P3 merged data + collab + CTD mapping -->
+    <section class="page" data-page="2">
+      <div class="page-head" style="margin-bottom:14px">
+        <div class="eyebrow">자료 &amp; 부서 협업 · eCTD 섹션 매핑</div>
+        <h2 class="display">무엇을, 어느 부서에서 받아 어느 섹션으로</h2>
+        <p class="sub">각 카드에 <b>커서를 올리면</b> RA가 받아올 자료와 그 자료가 들어가는 <b>CTD 섹션</b>이 펼쳐진다. 카드 상단 핀은 해당 부서 자료가 매핑되는 주 모듈. <b>1행 사용기한 연장</b>(Module 1–3 중심) / <b>2행 소아 연령확대</b>(Module 1–5 전체).</p>
+      </div>
+
+      <div class="row-label expiry"><span class="rl-tag">TYPE 01</span><span class="rl-t">사용기한 연장 — 자료·협업</span><span class="rl-ctd">주 수정: Module 1 · 2.3 · 3.2.P.8 (필요 시 3.2.P.5 / 3.2.P.2)</span></div>
+      <div class="dc-row" id="expiryDepts"></div>
+
+      <div class="row-label peds" style="margin-top:8px"><span class="rl-tag">TYPE 02</span><span class="rl-t">소아 연령확대 — 자료·협업</span><span class="rl-ctd">주 수정: Module 1 · 2.5 · 2.6/2.7 · 3 · 4 · 5</span></div>
+      <div class="dc-row" id="pedsDepts"></div>
+
+      <div class="note"><b>핵심 구분:</b> 사용기한 연장(케미컬 DP)은 극히 예외적 경우를 빼면 <b>Module 1–3</b>에서만 일어난다 — 라벨·허가사항(M1) + 안정성 CMC(M2.3, M3.2.P.8). 규격·시험법을 함께 바꾸면 3.2.P.5, 제형·용기 변경 시 3.2.P.2가 추가된다. 반면 연령확대는 임상·비임상까지 <b>Module 4·5가 필수</b>로 붙는다.</div>
+    </section>
+
+    <!-- P4 case timeline -->
+    <section class="page" data-page="3">
+      <div class="page-head" style="margin-bottom:14px">
+        <div class="eyebrow">문서 제출 → 변경 허가/승인 · 케이스별 타임라인</div>
+        <h2 class="display">유형별로 얼마나 걸리나</h2>
+        <p class="sub">케이스를 누르면 축 위에 <b>제출(Day 0) → 심사 마일스톤 → 처분/승인</b> 노드가 나타난다. <b>초록 = 사용기한 연장 / 주황 = 소아 연령확대</b>. 개발(iPSP·소아 임상) 층은 분리하고 <b>허가 변경 심사 구간</b>만 표시.</p>
+      </div>
+      <div class="tl-agency" id="tlAgency"></div>
+      <div class="tl-toggle" id="tlToggle"></div>
+      <div class="tl-stage" id="tlStage">
+        <div class="tl-header">
+          <div class="th-name" id="tlName"></div>
+          <div class="th-total" id="tlTotal"></div>
+        </div>
+        <div class="tl-desc" id="tlDesc"></div>
+        <div class="axis-wrap">
+          <div class="axis" id="tlAxis"><div class="progress" id="tlProg" style="width:0"></div><div class="arrow-head"></div></div>
+          <div class="axis-scale" id="tlScale"></div>
+          <div class="axis-unit" id="tlUnit"></div>
+        </div>
+        <div class="tl-foot" id="tlFoot"></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+<button class="side-arrow prev" id="prevBtn" onclick="prev()" aria-label="이전">‹</button>
+<button class="side-arrow next" id="nextBtn" onclick="next()" aria-label="다음">›</button>
+
+<script>
+const PAGE_TITLES=['사용기한 연장 — 의사결정','소아 연령확대 — 전략','자료·협업 & CTD 매핑','케이스별 타임라인'];
+const pages=[...document.querySelectorAll('.page')];const TOTAL=pages.length;let cur=0;
+const tabsWrap=document.getElementById('tabs');
+PAGE_TITLES.forEach((t,i)=>{const el=document.createElement('div');el.className='tab'+(i===0?' on':'');el.onclick=()=>goto(i);el.innerHTML=`<span class="n">${String(i+1).padStart(2,'0')}</span><span class="ttl">${t}</span>`;tabsWrap.appendChild(el);});
+function render(){pages.forEach((p,i)=>p.classList.toggle('active',i===cur));[...tabsWrap.children].forEach((t,i)=>t.classList.toggle('on',i===cur));document.getElementById('prevBtn').disabled=cur===0;document.getElementById('nextBtn').disabled=cur===TOTAL-1;const at=tabsWrap.children[cur];if(at)at.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});}
+function goto(i){cur=Math.max(0,Math.min(TOTAL-1,i));render();}
+function next(){goto(cur+1);}function prev(){goto(cur-1);}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='PageDown')next();if(e.key==='ArrowLeft'||e.key==='PageUp')prev();});
+
+/* P1 */
+const GRADES={
+  pas:{tag:'PAS',color:'var(--red)',bg:'rgba(178,58,72,.1)',name:'Prior Approval Supplement · 사전승인 보충',
+    rows:[['적용','품질에 <b>중대한 악영향 가능성</b>이 있는 major change. 승인된 protocol이 없거나 새 risk가 생긴 연장.'],['제출','sNDA/sBLA로 full data package. eCTD 품질파트 전체 재구성.'],['핵심요건','study report 중심 + raw data는 inspection/IR 대응용 내부 보관.']],
+    timing:100,timingCap:'FDA 승인 전까지 배포 불가 · PDUFA 목표 대략 6–10개월'},
+  cbe30:{tag:'CBE-30',color:'var(--amber)',bg:'rgba(200,117,42,.12)',name:'Changes Being Effected in 30 days',
+    rows:[['적용','중간 수준(moderate) 변경. protocol은 있으나 범위가 넓어진 경우.'],['제출','supplement 제출 후 FDA 수령일 기준 카운트.'],['핵심요건','품질시스템상 release 요건도 함께 충족돼야 실제 출고.']],
+    timing:32,timingCap:'FDA 수령 후 30일 경과하면 배포 가능'},
+  cbe0:{tag:'CBE-0',color:'var(--teal)',bg:'rgba(15,125,120,.12)',name:'Changes Being Effected (즉시)',
+    rows:[['적용','moderate 중에서도 위험이 낮아 즉시 시행이 허용되는 변경.'],['제출','supplement를 FDA에 제출하는 시점부터 시행 가능.'],['핵심요건','추후 FDA가 미흡 판단 시 보완·회수 리스크 존재.']],
+    timing:9,timingCap:'FDA 수령 시점부터 배포 가능'},
+  ar:{tag:'Annual Report',color:'var(--green)',bg:'rgba(47,125,91,.12)',name:'연차보고 · Minor change',
+    rows:[['적용','<b>승인된 protocol</b>에 따라 얻은 full shelf-life 데이터로 dating 변경 [314.70(d)(2)(vi)]. 영향 최소.'],['제출','사전 승인 불요. 연차보고서에 반영.'],['핵심요건','protocol acceptance criteria 충족 · QA release · labeling/date code 업데이트 완료.']],
+    timing:5,timingCap:'사전 승인 없이 시행 · 내부 적합성 확인 후 반영'}
+};
+function selGrade(g){document.querySelectorAll('.tree .chip').forEach(c=>c.classList.remove('sel'));document.querySelectorAll('.chip[data-g="'+g+'"]').forEach(c=>c.classList.add('sel'));const d=GRADES[g];const rows=d.rows.map(r=>`<div class="dp-row"><div class="lab">${r[0]}</div><div class="val">${r[1]}</div></div>`).join('');document.getElementById('gradePanel').innerHTML=`<div class="tag" style="background:${d.bg};color:${d.color}">◆ ${d.tag}</div><h3>${d.tag}</h3><div class="krname">${d.name}</div>${rows}<div class="timing-bar"><div class="tb-lab">라벨 반영 · 출고 가능 시점</div><div class="tb-track"><div class="tb-fill" style="width:${d.timing}%;background:${d.color}"></div></div><div class="tb-cap">${d.timingCap}</div></div>`;}
+selGrade('ar');
+
+/* P2 */
+const AGES=[
+  {grp:'청소년',yr:'12–17세',en:'Adolescents',extrap:88,design:'성인 유효성 <b>부분 외삽</b> + popPK/bridging + 안전성 cohort',endpoint:'성인과 동일 또는 매우 유사한 임상 endpoint',risk:'체중별 용량 · 생식/정신신경계 · 백신/호르몬 주의',ef:88,pk:60,safe:55},
+  {grp:'소아',yr:'2–11세',en:'Children',extrap:60,design:'연령층화 PK/PD + dose-ranging + 가능하면 randomized 확증',endpoint:'임상결과지표 + caregiver-reported outcome + 발달연령 척도',risk:'제형 순응도 · 복약오차 · 성장/학습 영향',ef:55,pk:82,safe:70},
+  {grp:'영아',yr:'28일–23개월',en:'Infants',extrap:38,design:'older data step-down + sparse PK + safety-led design',endpoint:'하드 endpoint 또는 생리학적 surrogate 신중 사용',risk:'영양·탈수 · 약동학 변동성 · 투여장치 오류',ef:35,pk:88,safe:85},
+  {grp:'신생아',yr:'0–27일',en:'Neonates',extrap:18,design:'<b>별도 프로그램</b> · sentinel/staggered enrollment',endpoint:'생존 · 장기기능 · 발달결과 등 고위험 endpoint',risk:'호흡·혈역학·신경발달·감염 감시 · 최소채혈 전략',ef:22,pk:92,safe:95}
+];
+const track=document.getElementById('ageTrack');
+AGES.forEach((a,i)=>{const el=document.createElement('div');el.className='age-step'+(i===0?' sel':'');el.onclick=()=>selAge(i);el.innerHTML=`<div class="agrp">${a.grp} <span class="yr">${a.yr}</span></div><div class="aen">${a.en}</div><div class="abar"><i style="width:${a.extrap}%"></i></div><div class="abar-lab">외삽 가능성 ${a.extrap}% <span style="opacity:.6">(개념도)</span></div>`;track.appendChild(el);});
+function selAge(i){[...track.children].forEach((c,j)=>c.classList.toggle('sel',i===j));const a=AGES[i];document.getElementById('agePanel').innerHTML=`<h3>${a.grp} <span class="yr">${a.yr}</span> <span class="een">${a.en}</span></h3><div class="adsub">외삽이 ${a.extrap>=70?'크게 가능':a.extrap>=45?'부분 가능':a.extrap>=30?'제한적':'거의 불가'}한 구간 · 개념적 표현</div><div class="adgrid"><div class="adr"><div class="k">설계</div><div class="v">${a.design}</div></div><div class="adr"><div class="k">Endpoint</div><div class="v">${a.endpoint}</div></div><div class="adr"><div class="k">위험관리</div><div class="v">${a.risk}</div></div></div><div class="extrap-meter"><div class="emh">자료 비중 (낮음 → 높음) · 개념도</div><div class="emrow"><span class="lbl">유효성 외삽</span><div class="track"><i style="width:${a.ef}%;background:var(--teal)"></i></div></div><div class="emrow"><span class="lbl">PK/용량</span><div class="track"><i style="width:${a.pk}%;background:var(--amber)"></i></div></div><div class="emrow"><span class="lbl">안전성</span><div class="track"><i style="width:${a.safe}%;background:var(--red)"></i></div></div></div>`;}
+selAge(0);
+
+/* P3 dept cards with CTD mapping */
+const EXPIRY_DEPTS=[
+  {name:'CMC / 제제',role:'제형·포장·container-closure 영향, 불순물·분해산물 프로파일 평가.',deliv:['제형·포장 스펙','불순물 프로파일 변화 자료','ICH Q1A/Q1E 외삽 논리'],ctd:'M3.2.P.2 (제제개발) · 필요 시 M3.2.P.5'},
+  {name:'QC / 분석',role:'장기·가속 안정성시험 수행·해석, OOS/OOT, 시험법·규격 검증.',deliv:['stability data 테이블·그래프','OOS/OOT 평가','통계적 shelf-life 추정(회귀·95% CI)','분석법 밸리데이션'],ctd:'M3.2.P.8.3 (Stability Data) · 필요 시 M3.2.P.5'},
+  {name:'QA',role:'change control 승인, 품질 시스템 영향, SOP·date code 개정.',deliv:['change control 문서','Deviation/CAPA','라벨·ERP date code 변경 계획'],ctd:'M1 (라벨·행정) 반영 · 내부 QMS'},
+  {name:'제조·생산',role:'안정성 배치 제조정보, 상업 배치 representativeness, 사후 안정성 프로그램.',deliv:['배치 제조정보(제조일·규모·라인)','post-approval stability 계획(배치·주기)'],ctd:'M3.2.P.8.1 / P.8.2 (Summary·Commitment)'},
+  {name:'Supply Chain',role:'연장 반영 시점, 재고 재라벨링, 로트 폐기/연장 전략.',deliv:['재고 로트 목록','유통기한별 분포','재라벨링/폐기 계획'],ctd:'허가사항 아님 · 시행 시점 관리'},
+  {name:'PV / 약물감시',role:'말기 제품 안전성·품질불만 패턴, 연장 후 신호 감시.',deliv:['AE/ADR(품질관련)','quality complaint','RMP 갱신(필요 시)'],ctd:'RMP(별도) · M1 첨부(해당 시)'},
+  {name:'메디컬',role:'연장이 안전성·유효성에 의미 변화 없다는 의료적 해석.',deliv:['임상·문헌 리뷰','메디컬 오피니언'],ctd:'M2.5 보조 근거(해당 시)'},
+  {name:'RA (본인)',role:'보고등급 판단, 라벨·허가사항 변경안, submission 구성.',deliv:['cover letter·신청서','개정 labeling/PI','변경 유형 표기','QoS 안정성 파트 갱신'],ctd:'M1 (전체) · M2.3.P.8 (QoS Stability)'},
+];
+const PEDS_DEPTS=[
+  {name:'임상개발',role:'소아 임상 설계·수행, iPSP 전략, FDA·MFDS 임상 미팅.',deliv:['소아 프로토콜·SAP','CSR·효과·안전성 데이터','iPSP 내용'],ctd:'M5 (임상) · M1 (meeting 요약)'},
+  {name:'임상약리 / PKPD',role:'popPK, exposure–response, 체중·연령별 용량, 외삽 모델.',deliv:['popPK 보고서','모델링·시뮬레이션','dose-banding/체중기반 용량안'],ctd:'M5.3.3 (popPK) · M2.7 요약'},
+  {name:'비임상 / Tox',role:'juvenile animal study 필요성, 발달·장기독성 자료.',deliv:['juvenile tox 결과','발달독성·생식독성 보고서'],ctd:'M4 (비임상) · M2.4 요약'},
+  {name:'제제 / CMC',role:'소아 제형(시럽·분산정·저강도) 설계, 적합성 평가.',deliv:['소아용 제형 스펙','투여 정확성·안정성','CMC 변경 자료'],ctd:'M3 (품질·제형)'},
+  {name:'PV / RMP',role:'소아 임상 안전성 리뷰, 성인 비교, RMP·PASS 설계.',deliv:['소아 AE/ADR','신호 탐지','RMP 변경안(새 연령군)','PSUR/PBRER 계획'],ctd:'RMP(별도) · M1·M5 반영'},
+  {name:'메디컬',role:'질환 자연사, 성인 vs 소아 병태생리, 외삽 허용범위 의견.',deliv:['가이드라인 리뷰','레지스트리 데이터','전문가 자문'],ctd:'M2.5 (extrapolation rationale)'},
+  {name:'HEOR / RWE',role:'소아 환자 수요, 실제 사용 패턴, 청구·레지스트리 분석.',deliv:['RWD/RWE 리포트','미충족 수요','급여 영향'],ctd:'허가 외 · 근거보강(해당 시)'},
+  {name:'RA (본인)',role:'iPSP 제출·수정, sNDA/sBLA CTD 작성, waiver/deferral 협의, 라벨 개정.',deliv:['iPSP 문서','CTD Module 1–5 소아부분','revised PI(Pediatric Use)'],ctd:'M1 (PI·행정) · M2.5 통합'},
+];
+function renderDepts(id,list,amber){
+  document.getElementById(id).innerHTML=list.map(d=>`
+    <div class="dept-card${amber?' amber':''}">
+      <div class="ctd-pin">${d.ctd.split(' · ')[0]}</div>
+      <div class="dname">${d.name}</div>
+      <div class="drole">${d.role}</div>
+      <div class="deliv">
+        <div class="dh">RA가 받아올 자료</div>
+        <ul>${d.deliv.map(x=>`<li>${x}</li>`).join('')}</ul>
+        <div class="ctd-map">→ 들어가는 섹션 <b>${d.ctd}</b></div>
+      </div>
+    </div>`).join('');
+}
+renderDepts('expiryDepts',EXPIRY_DEPTS,false);
+renderDepts('pedsDepts',PEDS_DEPTS,true);
+
+/* P4 timeline cases — agency: 'MFDS' | 'FDA' */
+const CASES=[
+  /* ===== MFDS ===== */
+  {id:'mfds_exp_ss',agency:'MFDS',cat:'변경허가 · 사용기한',type:'expiry',name:'MFDS 사용기한 — 안정성만',badge:'변경허가 50일',badgeColor:'var(--teal)',
+    total:'법정 50일 (실무 약 2개월)',unit:'단위 · 일(day) · 근무일 기준',scale:['0','20','40','50','65'],
+    desc:'허가품목에서 안정성시험 자료만으로 사용기간 연장, 규격·시험법은 그대로. 통상 <b>50일 축</b>으로 보수적으로 본다. (단순 변경이면 20일 "그 밖의 품목"도 가능하나 안정성 심사가 붙어 대개 50일.)',
+    nodes:[[0,'Day 0','eCTD M1–3 제출','up'],[38,'Day 1–50','서류 심사·보완(clock-stop)','down'],[77,'Day 50','변경허가 처분','up']],
+    foot:'근거: 「의약품등 허가사항 변경허가」 민원안내 (20/40/50/65일). 보완 시 clock-stop으로 실측 소요는 길어질 수 있음.'},
+  {id:'mfds_exp_full',agency:'MFDS',cat:'변경허가 · 사용기한',type:'expiry',name:'MFDS 사용기한 — 기준·시험법 포함',badge:'변경허가 50–65일',badgeColor:'var(--teal)',
+    total:'법정 50–65일 (실무 2–3개월)',unit:'단위 · 일(day) · 근무일 기준',scale:['0','20','40','50','65'],
+    desc:'24→36개월 연장하며 분해산물 스펙·시험법도 조정. <b>기준·시험방법 검토 50일</b>, 안전성·유효성/RMP까지 포함 시 <b>65일</b>.',
+    nodes:[[0,'Day 0','eCTD M1–3 제출','up'],[38,'Day 1–65','심사 + 보완요구','down'],[77,'Day 50','기준·시험법 처분','up'],[100,'Day 65','RMP 포함 처분','down']],
+    foot:'근거: 기준·시험방법 검토 필요 품목 50일 / 안전성·유효성·RMP 검토 필요 품목 65일.'},
+  {id:'mfds_ped',agency:'MFDS',cat:'변경허가 · 연령확대',type:'peds',name:'MFDS 연령확대 — 변경허가',badge:'변경허가 65일',badgeColor:'var(--amber)',
+    total:'법정 65일 (실무 3–4개월)',unit:'단위 · 일(day) · 근무일 기준',scale:['0','20','40','65','75'],
+    desc:'소아 임상은 <b>완료</b> 가정, 허가사항 변경 구간만. 효능·용법·대상연령 변경 + 안전성·유효성·RMP 검토 → <b>안전성·유효성 자료 및 RMP 검토 필요 품목(65일)</b>. 중앙약심 검토 포함.',
+    nodes:[[0,'Day 0','CTD M1–5 관련부분 제출','up'],[43,'Day 1–65','서류·중앙약심 검토·보완','down'],[87,'Day 65','변경허가 처분','up']],
+    foot:'소아 임상 개발(수년)은 허가 전 단계로 타임라인 층 분리. 실무는 라벨·PV/RMP 조정까지 3–4개월.'},
+  {id:'mfds_noti_full',agency:'MFDS',cat:'변경신고 · 사용기한',type:'expiry',name:'MFDS 사용기한 — 변경신고(기시 포함)',badge:'변경신고 40일',badgeColor:'var(--teal)',
+    total:'법정 40일 (실무 약 2개월)',unit:'단위 · 일(day) · 근무일 기준',scale:['0','10','20','30','40'],
+    desc:'신고품목(일부 일반의약품·의약외품)에서 사용기한 연장 + 기준·시험방법(기시법) 조정을 <b>변경신고</b>로 처리. <b>기준·시험방법 제출자료 검토 필요 품목 → 40일</b>. 보완기간은 처리기간에서 제외.',
+    nodes:[[0,'Day 0','변경신고 접수(M1–3)','up'],[45,'Day 0–40','심사·보완요청','down'],[92,'Day 40','변경신고 수리','up']],
+    foot:'근거: 정부24 「품목신고(변경신고)」 (10/30/40일). 안정성·기시자료가 들어가면 40일 축으로 보는 게 안전.'},
+  {id:'mfds_noti_minor',agency:'MFDS',cat:'변경신고 · 사용기한',type:'expiry',name:'MFDS 사용기한 — 변경신고(경미)',badge:'변경신고 10일',badgeColor:'var(--green)',
+    total:'법정 10일',unit:'단위 · 일(day) · 근무일 기준',scale:['0','','5','','10'],
+    desc:'기준·시험방법은 전혀 손대지 않고 <b>정말 경미한 변경</b>(예: 라벨 문구 수정 수준)만 있는 단순 사용기간 변경신고. 심사를 요하는 품질·안전성 자료가 없어 <b>10일</b>.',
+    nodes:[[0,'Day 0','변경신고 접수','up'],[92,'Day 10','수리','up']],
+    foot:'주의: 안정성시험자료가 실제로 들어가면 MFDS가 40일(기시 심사)로 볼 여지가 크다. 10일은 자료심사 불요 사안 한정.'},
+  {id:'mfds_noti_ped',agency:'MFDS',cat:'변경신고 · 연령확대',type:'peds',name:'MFDS 연령확대 — 변경신고',badge:'변경신고 55일',badgeColor:'var(--amber)',
+    total:'법정 55일 (실무 약 3개월)',unit:'단위 · 일(day) · 근무일 기준',scale:['0','20','40','55','65'],
+    desc:'신고품목(의약외품 등)에서 연령층 확대를 <b>변경신고</b>로 처리하는 경우. 안전성·유효성 자료가 들어가 <b>안전성·유효성 제출자료 검토 필요 품목 → 55일</b>. (의약품 본류는 안·유 심사 대상이면 변경허가 65일로 가는 게 일반적.)',
+    nodes:[[0,'Day 0','변경신고 접수(M1–5)','up'],[46,'Day 0–55','심사·보완','down'],[92,'Day 55','변경신고 수리','up']],
+    foot:'근거: 정부24 「품목신고(변경신고)」 안전성·유효성 제출자료 검토 필요 품목 55일. 실무 약 3개월.'},
+  /* ===== FDA ===== */
+  {id:'fda_pas_noinsp',agency:'FDA',cat:'사용기한 · PAS',type:'expiry',name:'FDA 사용기한 — PAS (inspection 불요)',badge:'PAS',badgeColor:'var(--red)',
+    total:'약 6개월 (GDUFA 목표)',unit:'단위 · 월(month)',scale:['0','3M','6M','9M','12M'],
+    desc:'major change 또는 comparability protocol 없이 new risk를 만드는 연장. <b>GDUFA PAS(ANDA) 6개월</b>. NDA/BLA는 동일 수치 직접 적용은 아니나 PDUFA 리뷰 6–10개월 범위.',
+    nodes:[[0,'Day 0','PAS 제출','up'],[48,'~D90–120','IR(질의)·보완','down'],[92,'~6개월','승인 / CR letter','up']],
+    foot:'승인 전까지 변경 조건 제품 배포 불가.'},
+  {id:'fda_pas_insp',agency:'FDA',cat:'사용기한 · PAS',type:'expiry',name:'FDA 사용기한 — PAS (inspection 필요)',badge:'PAS',badgeColor:'var(--red)',
+    total:'약 10개월 (실무 9–12개월)',unit:'단위 · 월(month)',scale:['0','3M','6M','9M','12M'],
+    desc:'제조소 변경 동반으로 pre-approval inspection 필요. <b>GDUFA PAS 목표 10개월</b>, inspection 일정 고려 시 9–12개월까지.',
+    nodes:[[0,'Day 0','PAS 제출','up'],[38,'중간','IR·보완','down'],[65,'pre-approval','inspection','up'],[92,'~10개월','승인','down']],
+    foot:'inspection 스케줄이 전체 시계를 좌우. 보수적으로 12개월까지 여유.'},
+  {id:'fda_cbe30',agency:'FDA',cat:'사용기한 · CBE',type:'expiry',name:'FDA 사용기한 — CBE-30',badge:'CBE-30',badgeColor:'var(--amber)',
+    total:'제출 + 30일',unit:'단위 · 일(day)',scale:['0','15','30','45','60'],
+    desc:'moderate change, 안정성 데이터 탄탄·comparability 명확. 제출 후 <b>30일</b> 경과하면 변경 조건 출고 가능.',
+    nodes:[[0,'Day 0','CBE-30 제출','up'],[38,'Day 0–30','FDA 리뷰·이슈 제기 가능','down'],[77,'Day 30+','변경 조건 출고','up']],
+    foot:'"보고→시행" 사이클: 데이터 준비 + 약 1개월.'},
+  {id:'fda_cbe0',agency:'FDA',cat:'사용기한 · CBE',type:'expiry',name:'FDA 사용기한 — CBE-0',badge:'CBE-0',badgeColor:'var(--teal)',
+    total:'제출 즉시 시행',unit:'단위 · 일(day)',scale:['Day 0','','','','후속'],
+    desc:'moderate지만 리스크 낮음, 또는 승인된 PACMP 범위 내. <b>제출 즉시 변경 시행</b>, FDA는 후속 리뷰로 필요 시 조치.',
+    nodes:[[0,'Day 0','CBE-0 제출 = 시행','up'],[92,'이후','annual review·IR 후속','down']],
+    foot:'순수 심사기간 개념이 거의 없음. "준비 끝난 날 = 시행".'},
+  {id:'fda_ar',agency:'FDA',cat:'사용기한 · AR',type:'expiry',name:'FDA 사용기한 — Annual Report',badge:'Annual Report',badgeColor:'var(--green)',
+    total:'연차보고 주기 (사전승인 없음)',unit:'단위 · 보고 주기',scale:['보고','','','','내부반영'],
+    desc:'승인된 stability protocol 범위 내 예정 데이터로 라벨 expiration 갱신하는 truly minor 변경. <b>사전 승인 타임라인 없음</b>.',
+    nodes:[[0,'제출','연차보고에 요약 포함','up'],[92,'시행','QMS·라벨·ERP 날짜와 정렬','down']],
+    foot:'변경 시행은 내부 품질시스템·라벨·ERP 업데이트일과 맞춰 관리.'},
+  {id:'fda_ipsp',agency:'FDA',cat:'연령확대 · iPSP',type:'peds',name:'FDA 연령확대 — iPSP (개발계획)',badge:'iPSP 최대 210일',badgeColor:'var(--amber)',
+    total:'최대 210일',unit:'단위 · 일(day) · iPSP 전용 스케일',scale:['0','60','120','180','210'],
+    desc:'개발 단계 필수 마일스톤. FDA <b>iPSP 리뷰 최대 210일</b>. 동의 전까지 sNDA 등 마케팅 신청 제출 불가.',
+    nodes:[[0,'Day 0','iPSP 제출','up'],[43,'≤ Day 90','FDA 첫 피드백','down'],[86,'≤ Day 180','스폰서 수정·합의안','up'],[100,'≤ Day 210','최종 동의/비동의','down']],
+    foot:'※ 축은 iPSP 전용 스케일(0–210일). sNDA 심사와는 별도 층.'},
+  {id:'fda_snda',agency:'FDA',cat:'연령확대 · sNDA',type:'peds',name:'FDA 연령확대 — sNDA / sBLA (허가변경)',badge:'6–10개월',badgeColor:'var(--amber)',
+    total:'약 6–10개월 (PDUFA)',unit:'단위 · 월(month)',scale:['0','3M','6M','9M','12M'],
+    desc:'소아 PK/PD·임상·비임상·CMC·라벨 포함 제출. 대부분 라벨 변경/적응증 확대는 <b>PDUFA 6–10개월</b> 리뷰 목표.',
+    nodes:[[0,'Day 0','sNDA/sBLA 제출','up'],[15,'D60–74','filing review·타임라인 통지','down'],[55,'mid-cycle','labeling·risk-benefit·IR','up'],[92,'6–10개월','승인 / CR','down']],
+    foot:'앞단에 iPSP(최대 210일)와 소아 임상(수년)이 붙는 구조. 여기선 심사 구간만 표시.'},
+];
+const AGENCIES=['MFDS','FDA'];
+let curAgency='MFDS';
+const tlAgency=document.getElementById('tlAgency');
+const tlToggle=document.getElementById('tlToggle');
+AGENCIES.forEach((ag,i)=>{
+  const b=document.createElement('button');
+  b.className='ag-btn'+(i===0?' on':'');
+  b.onclick=()=>selAgency(ag,b);
+  b.innerHTML=`<span class="flag">${ag==='MFDS'?'KR':'US'}</span>${ag}`;
+  tlAgency.appendChild(b);
+});
+function selAgency(ag,btn){
+  curAgency=ag;
+  [...tlAgency.children].forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  buildSubTabs();
+}
+function buildSubTabs(){
+  tlToggle.innerHTML='';
+  const list=CASES.map((c,i)=>({c,i})).filter(o=>o.c.agency===curAgency);
+  list.forEach((o,k)=>{
+    const b=document.createElement('button');
+    b.className='tl-btn '+o.c.type+(k===0?' on':'');
+    b.dataset.idx=o.i;
+    b.onclick=()=>selCase(o.i,b);
+    b.innerHTML=`<span class="cat">${o.c.cat}</span><span>${o.c.name.split('— ')[1]||o.c.name}</span>`;
+    tlToggle.appendChild(b);
+  });
+  if(list.length) selCase(list[0].i,tlToggle.children[0]);
+}
+function selCase(i,btn){
+  [...tlToggle.children].forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');
+  const c=CASES[i];const stage=document.getElementById('tlStage');
+  stage.classList.toggle('peds-mode',c.type==='peds');
+  document.getElementById('tlName').innerHTML=`${c.name} <span class="badge" style="background:${c.badgeColor};color:#fff">${c.badge}</span>`;
+  document.getElementById('tlTotal').textContent='총 '+c.total;
+  document.getElementById('tlDesc').innerHTML=c.desc;
+  document.getElementById('tlFoot').innerHTML=c.foot;
+  document.getElementById('tlUnit').textContent=c.unit||'';
+  const axis=document.getElementById('tlAxis');
+  [...axis.querySelectorAll('.node')].forEach(n=>n.remove());
+  const scale=document.getElementById('tlScale');scale.innerHTML=c.scale.map(s=>`<span>${s}</span>`).join('');
+  document.getElementById('tlProg').style.width='0';
+  c.nodes.forEach((nd,k)=>{
+    const pct=nd[0];const el=document.createElement('div');
+    let edge='';
+    if(pct<=6)edge=' edge-l';else if(pct>=94)edge=' edge-r';
+    el.className='node '+nd[3]+edge;el.style.left=pct+'%';
+    el.innerHTML=`<div class="lbl">${nd[2]}</div><div class="pill">${nd[1]}</div><div class="dot"></div>`;
+    axis.appendChild(el);
+    setTimeout(()=>el.classList.add('show'),120+k*160);
+  });
+  const lastPct=c.nodes[c.nodes.length-1][0];
+  setTimeout(()=>{document.getElementById('tlProg').style.width=lastPct+'%';},200);
+}
+buildSubTabs();
+
+render();
+</script>
+</body>
+</html>
