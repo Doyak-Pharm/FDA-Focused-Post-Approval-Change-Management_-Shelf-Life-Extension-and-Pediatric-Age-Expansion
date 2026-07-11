@@ -50,13 +50,15 @@
   /* P1 tree */
   .tree-layout{display:grid;grid-template-columns:1.1fr 1fr;gap:26px;flex:1;min-height:0}
   @media(max-width:1050px){.tree-layout{grid-template-columns:1fr}}
-  .tree{display:flex;flex-direction:column;gap:13px;align-content:start}
-  .tree .root{background:var(--ink);color:var(--paper);border-radius:13px;padding:17px 22px;font-size:16px;font-weight:500}
+  .tree{display:flex;flex-direction:column;gap:16px;height:100%}
+  .tree .root{background:var(--ink);color:var(--paper);border-radius:13px;padding:18px 22px;font-size:16px;font-weight:500;flex-shrink:0}
   .tree .root .en{color:var(--teal-2);font-weight:600}
-  .q-node{background:var(--white);border:1.5px solid var(--line);border-radius:13px;padding:16px 20px}
+  .tree .qwrap{flex:1;display:flex;flex-direction:column;gap:16px;min-height:0}
+  .q-node{background:var(--white);border:1.5px solid var(--line);border-radius:13px;padding:20px 22px;display:flex;flex-direction:column;justify-content:center}
+  .q-node.grow{flex:1}
   .q-node .q{font-size:15.5px;font-weight:600;color:var(--ink);display:flex;gap:9px;align-items:baseline;line-height:1.45}
   .q-node .q .dot{width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0;transform:translateY(-1px)}
-  .branches{display:flex;flex-wrap:wrap;gap:9px;margin-top:13px}
+  .branches{display:flex;flex-wrap:wrap;gap:11px;margin-top:16px}
   .chip{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;padding:9px 14px;border-radius:9px;cursor:pointer;border:1.5px solid transparent;transition:all .2s;user-select:none}
   .chip[data-g="pas"]{background:rgba(178,58,72,.1);color:var(--red);border-color:rgba(178,58,72,.28)}
   .chip[data-g="cbe30"]{background:rgba(200,117,42,.12);color:var(--amber);border-color:rgba(200,117,42,.3)}
@@ -215,7 +217,8 @@
       <div class="tree-layout">
         <div class="tree">
           <div class="root">기허가 품목의 <span class="en">shelf-life extension</span> 신청</div>
-          <div class="q-node">
+          <div class="qwrap">
+          <div class="q-node grow">
             <div class="q"><span class="dot"></span>Q1. 이미 <b>승인된 stability protocol</b>에 따라 얻은 full shelf-life 데이터인가? <span style="font-weight:400;color:var(--slate);font-size:13px">(NO면 risk 크기에 따라 CBE-30 또는 PAS)</span></div>
             <div class="branches">
               <div class="chip" data-g="ar" onclick="selGrade('ar')">YES → Annual Report</div>
@@ -223,7 +226,7 @@
               <div class="chip" data-g="pas" onclick="selGrade('pas')">NO → PAS</div>
             </div>
           </div>
-          <div class="q-node">
+          <div class="q-node grow">
             <div class="q"><span class="dot"></span>Q2. 변경이 품질에 미치는 영향(risk)의 크기는?</div>
             <div class="branches">
               <div class="chip" data-g="pas" onclick="selGrade('pas')">Major → PAS</div>
@@ -232,7 +235,8 @@
               <div class="chip" data-g="ar" onclick="selGrade('ar')">Minor → Annual Report</div>
             </div>
           </div>
-          <div class="q-node" style="background:var(--paper);border-style:dashed">
+          </div>
+          <div class="q-node" style="background:var(--paper);border-style:dashed;flex-shrink:0">
             <div class="q" style="color:var(--slate);font-size:14.5px"><span class="dot" style="background:var(--teal)"></span>Tip. <b style="color:var(--ink-2)">Comparability Protocol(PACMP)</b>이 승인돼 있으면 한 등급씩 낮출 수 있다 (PAS→CBE, CBE→AR).</div>
           </div>
         </div>
@@ -309,7 +313,51 @@ PAGE_TITLES.forEach((t,i)=>{const el=document.createElement('div');el.className=
 function render(){pages.forEach((p,i)=>p.classList.toggle('active',i===cur));[...tabsWrap.children].forEach((t,i)=>t.classList.toggle('on',i===cur));document.getElementById('prevBtn').disabled=cur===0;document.getElementById('nextBtn').disabled=cur===TOTAL-1;const at=tabsWrap.children[cur];if(at)at.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});}
 function goto(i){cur=Math.max(0,Math.min(TOTAL-1,i));render();}
 function next(){goto(cur+1);}function prev(){goto(cur-1);}
-document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='PageDown')next();if(e.key==='ArrowLeft'||e.key==='PageUp')prev();});
+
+/* per-page step sequences for arrow-key navigation */
+const GRADE_SEQ=['ar','cbe0','cbe30','pas']; // P1 위험도 오름차순
+let gradeIdx=0, ageIdx=0; // caseIdx handled via tlToggle DOM
+function stepForward(){
+  if(cur===0){ // grades
+    if(gradeIdx<GRADE_SEQ.length-1){gradeIdx++;selGrade(GRADE_SEQ[gradeIdx]);return true;}
+  }else if(cur===1){ // ages
+    if(ageIdx<AGES.length-1){ageIdx++;selAge(ageIdx);return true;}
+  }else if(cur===3){ // timeline cases within current agency
+    const btns=[...tlToggle.children];const on=btns.findIndex(b=>b.classList.contains('on'));
+    if(on>-1&&on<btns.length-1){btns[on+1].click();return true;}
+  }
+  return false; // no more steps on this page
+}
+function stepBackward(){
+  if(cur===0){
+    if(gradeIdx>0){gradeIdx--;selGrade(GRADE_SEQ[gradeIdx]);return true;}
+  }else if(cur===1){
+    if(ageIdx>0){ageIdx--;selAge(ageIdx);return true;}
+  }else if(cur===3){
+    const btns=[...tlToggle.children];const on=btns.findIndex(b=>b.classList.contains('on'));
+    if(on>0){btns[on-1].click();return true;}
+  }
+  return false;
+}
+function resetPageStep(dir){
+  // when arriving on a page via arrow, set step to first(forward) or last(backward)
+  if(cur===0){gradeIdx=dir>0?0:GRADE_SEQ.length-1;selGrade(GRADE_SEQ[gradeIdx]);}
+  else if(cur===1){ageIdx=dir>0?0:AGES.length-1;selAge(ageIdx);}
+  else if(cur===3){const btns=[...tlToggle.children];const t=dir>0?0:btns.length-1;if(btns[t])btns[t].click();}
+}
+function arrowNav(dir){
+  const moved = dir>0?stepForward():stepBackward();
+  if(moved) return;
+  // reached end of this page's steps → change page and land on first/last step
+  const target=cur+dir;
+  if(target<0||target>TOTAL-1) return;
+  goto(target);
+  resetPageStep(dir);
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();arrowNav(1);}
+  if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();arrowNav(-1);}
+});
 
 /* P1 */
 const GRADES={
